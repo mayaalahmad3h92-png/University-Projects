@@ -1,0 +1,50 @@
+name: Validate Report
+
+on:
+  pull_request:
+    paths:
+      - 'projects/**'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Check file naming
+        run: |
+          files=$(git diff --name-only origin/main...HEAD | grep "^projects/" || true)
+          if [ -z "$files" ]; then
+            echo "No project files detected"
+            exit 1
+          fi
+          
+          errors=0
+          for file in $files; do
+            filename=$(basename "$file")
+            folder=$(dirname "$file" | sed 's|projects/||')
+            
+            if [[ ! "$folder" =~ ^(semester|graduation-1|graduation-2)$ ]]; then
+              echo "ERROR: Wrong folder: $folder"
+              errors=$((errors + 1))
+              continue
+            fi
+            
+            if [[ ! "$filename" =~ ^[0-9]{3}-[a-z0-9-]+\.(pdf|docx)$ ]]; then
+              echo "ERROR: Bad filename: $filename"
+              echo "Format: 001-project-name.pdf"
+              errors=$((errors + 1))
+              continue
+            fi
+            
+            echo "OK: $file"
+          done
+          
+          if [ $errors -gt 0 ]; then
+            echo "FAILED: $errors errors"
+            exit 1
+          fi
+          
+          echo "ALL CHECKS PASSED"
