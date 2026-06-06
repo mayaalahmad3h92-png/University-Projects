@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نظام تقارير المشاريع - لجنة التحكيم</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+        .header h1 { font-size: 2.5em; margin-bottom: 10px; }
+        .header p { font-size: 1.2em; opacity: 0.9; }
+        .stats {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        .stat-box {
+            background: rgba(255,255,255,0.2);
+            padding: 15px 30px;
+            border-radius: 15px;
+            text-align: center;
+        }
+        .stat-box .number { font-size: 2em; font-weight: bold; }
+        .stat-box .label { font-size: 0.9em; opacity: 0.9; }
+        .controls {
+            padding: 30px 40px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .search-box {
+            flex: 1;
+            min-width: 250px;
+            position: relative;
+        }
+        .search-box input {
+            width: 100%;
+            padding: 12px 20px;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            font-size: 1em;
+            transition: all 0.3s;
+        }
+        .search-box input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .filter-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .filter-btn {
+            padding: 10px 20px;
+            border: 2px solid #667eea;
+            background: white;
+            color: #667eea;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 0.95em;
+            transition: all 0.3s;
+            font-weight: 600;
+        }
+        .filter-btn:hover, .filter-btn.active {
+            background: #667eea;
+            color: white;
+        }
+        .table-container {
+            padding: 0;
+            overflow-x: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        thead {
+            background: #667eea;
+            color: white;
+        }
+        th {
+            padding: 18px;
+            text-align: right;
+            font-weight: 600;
+            font-size: 1.05em;
+        }
+        td {
+            padding: 16px 18px;
+            border-bottom: 1px solid #e9ecef;
+        }
+        tbody tr:hover {
+            background: #f8f9fa;
+        }
+        .level-badge {
+            display: inline-block;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+        .level-semester { background: #e3f2fd; color: #1976d2; }
+        .level-grad1 { background: #fff3e0; color: #f57c00; }
+        .level-grad2 { background: #fce4ec; color: #c2185b; }
+        .project-number {
+            font-weight: bold;
+            color: #667eea;
+            font-size: 1.1em;
+        }
+        .project-name {
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        .download-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-size: 0.9em;
+            transition: all 0.3s;
+        }
+        .download-btn:hover {
+            background: #5a6fd6;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        .loading {
+            text-align: center;
+            padding: 60px;
+            color: #667eea;
+            font-size: 1.2em;
+        }
+        .error {
+            text-align: center;
+            padding: 40px;
+            color: #e74c3c;
+            background: #fdf2f2;
+            margin: 20px;
+            border-radius: 10px;
+        }
+        .empty {
+            text-align: center;
+            padding: 60px;
+            color: #7f8c8d;
+        }
+        @media (max-width: 768px) {
+            .header h1 { font-size: 1.8em; }
+            .controls { flex-direction: column; align-items: stretch; }
+            .search-box { width: 100%; }
+            th, td { padding: 12px; font-size: 0.9em; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📚 نظام تقارير المشاريع</h1>
+            <p>لوحة تحكم لجنة التحكيم - جميع التقارير مرتبة وجاهزة للتحميل</p>
+            <div class="stats">
+                <div class="stat-box">
+                    <div class="number" id="total-count">0</div>
+                    <div class="label">إجمالي المشاريع</div>
+                </div>
+                <div class="stat-box">
+                    <div class="number" id="semester-count">0</div>
+                    <div class="label">فصلي</div>
+                </div>
+                <div class="stat-box">
+                    <div class="number" id="grad1-count">0</div>
+                    <div class="label">تخرج 1</div>
+                </div>
+                <div class="stat-box">
+                    <div class="number" id="grad2-count">0</div>
+                    <div class="label">تخرج 2</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <div class="search-box">
+                <input type="text" id="search-input" placeholder="🔍 ابحث برقم المشروع أو الاسم...">
+            </div>
+            <div class="filter-buttons">
+                <button class="filter-btn active" data-filter="all">الكل</button>
+                <button class="filter-btn" data-filter="semester">فصلي</button>
+                <button class="filter-btn" data-filter="graduation-1">تخرج 1</button>
+                <button class="filter-btn" data-filter="graduation-2">تخرج 2</button>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <div id="loading" class="loading">⏳ جاري تحميل المشاريع...</div>
+            <div id="error" class="error" style="display:none;"></div>
+            <table id="projects-table" style="display:none;">
+                <thead>
+                    <tr>
+                        <th>المستوى</th>
+                        <th>رقم المشروع</th>
+                        <th>اسم المشروع</th>
+                        <th>تحميل التقرير</th>
+                    </tr>
+                </thead>
+                <tbody id="projects-body"></tbody>
+            </table>
+            <div id="empty" class="empty" style="display:none;">
+                📭 لا توجد مشاريع متاحة حالياً
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const CONFIG = {
+            owner: 'mayaalahmad3h92-png',
+            repo: 'University-Projects',
+            folders: ['semester', 'graduation-1', 'graduation-2']
+        };
+
+        let allProjects = [];
+
+        async function loadProjects() {
+            const loading = document.getElementById('loading');
+            const error = document.getElementById('error');
+            const table = document.getElementById('projects-table');
+            
+            try {
+                const promises = CONFIG.folders.map(async (folder) => {
+                    const url = `https://api.github.com/repos/${CONFIG.owner}/${CONFIG.repo}/contents/projects/${folder}`;
+                    const response = await fetch(url);
+                    
+                    if (response.status === 404) return [];
+                    if (!response.ok) throw new Error(`فشل تحميل ${folder}: ${response.status}`);
+                    
+                    const files = await response.json();
+                    return files
+                        .filter(f => f.type === 'file' && /\.(pdf|docx)$/i.test(f.name))
+                        .map(f => {
+                            const match = f.name.match(/^(\d{3})-(.+)\.(pdf|docx)$/i);
+                            if (!match) return null;
+                            return {
+                                level: folder,
+                                levelDisplay: getLevelDisplay(folder),
+                                levelClass: getLevelClass(folder),
+                                number: match[1],
+                                name: match[2].replace(/-/g, ' '),
+                                filename: f.name,
+                                downloadUrl: f.download_url,
+                                htmlUrl: f.html_url
+                            };
+                        }).filter(Boolean);
+                });
+
+                const results = await Promise.all(promises);
+                allProjects = results.flat().sort((a, b) => {
+                    const levelOrder = { 'semester': 1, 'graduation-1': 2, 'graduation-2': 3 };
+                    if (levelOrder[a.level] !== levelOrder[b.level]) {
+                        return levelOrder[a.level] - levelOrder[b.level];
+                    }
+                    return parseInt(a.number) - parseInt(b.number);
+                });
+
+                updateStats();
+                renderTable(allProjects);
+                
+                loading.style.display = 'none';
+                table.style.display = 'table';
+                
+            } catch (err) {
+                loading.style.display = 'none';
+                error.style.display = 'block';
+                error.innerHTML = `
+                    <strong>❌ خطأ في تحميل البيانات</strong><br><br>
+                    ${err.message}<br><br>
+                    <small>تأكد من أن المستودع عام (Public) وأن الإعدادات صحيحة</small>
+                `;
+            }
+        }
+
+        function getLevelDisplay(level) {
+            const map = {
+                'semester': 'فصلي',
+                'graduation-1': 'تخرج 1',
+                'graduation-2': 'تخرج 2'
+            };
+            return map[level] || level;
+        }
+
+        function getLevelClass(level) {
+            const map = {
+                'semester': 'level-semester',
+                'graduation-1': 'level-grad1',
+                'graduation-2': 'level-grad2'
+            };
+            return map[level] || '';
+        }
+
+        function updateStats() {
+            document.getElementById('total-count').textContent = allProjects.length;
+            document.getElementById('semester-count').textContent = allProjects.filter(p => p.level === 'semester').length;
+            document.getElementById('grad1-count').textContent = allProjects.filter(p => p.level === 'graduation-1').length;
+            document.getElementById('grad2-count').textContent = allProjects.filter(p => p.level === 'graduation-2').length;
+        }
+
+        function renderTable(projects) {
+            const tbody = document.getElementById('projects-body');
+            const empty = document.getElementById('empty');
+            const table = document.getElementById('projects-table');
+            
+            if (projects.length === 0) {
+                table.style.display = 'none';
+                empty.style.display = 'block';
+                return;
+            }
+            
+            table.style.display = 'table';
+            empty.style.display = 'none';
+            
+            tbody.innerHTML = projects.map(p => `
+                <tr>
+                    <td><span class="level-badge ${p.levelClass}">${p.levelDisplay}</span></td>
+                    <td class="project-number">#${p.number}</td>
+                    <td class="project-name">${p.name}</td>
+                    <td>
+                        <a href="${p.downloadUrl}" class="download-btn" target="_blank" download>
+                            ⬇️ تحميل
+                        </a>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                
+                const filter = btn.dataset.filter;
+                const filtered = filter === 'all' 
+                    ? allProjects 
+                    : allProjects.filter(p => p.level === filter);
+                renderTable(filtered);
+            });
+        });
+
+        document.getElementById('search-input').addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase();
+            const filtered = allProjects.filter(p => 
+                p.number.includes(query) || 
+                p.name.toLowerCase().includes(query) ||
+                p.levelDisplay.includes(query)
+            );
+            renderTable(filtered);
+        });
+
+        loadProjects();
+    </script>
+</body>
+</html>
